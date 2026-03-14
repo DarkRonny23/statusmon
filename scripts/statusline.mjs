@@ -1,21 +1,49 @@
 import { loadTrainer, saveTrainer } from '../lib/trainer.mjs';
-import { computeLevel, tokensToXp, checkEvolution, shouldRelease, getStages, findCurrentStageIndex, newEncounter, resolveSpeciesMeta } from '../lib/evolution.mjs';
+import {
+  computeLevel,
+  tokensToXp,
+  checkEvolution,
+  shouldRelease,
+  getStages,
+  findCurrentStageIndex,
+  newEncounter,
+  resolveSpeciesMeta,
+} from '../lib/evolution.mjs';
 import { renderSprite } from '../lib/sprite.mjs';
 import { recordPokemon, loadPokedex } from '../lib/pokedex.mjs';
 
 const TYPE_EMOJI = {
-  normal: '⬜', fire: '🔥', water: '💧', grass: '🌿',
-  electric: '⚡', ice: '❄️', fighting: '🥊', poison: '☠️',
-  ground: '🌍', flying: '🪽', psychic: '🔮', bug: '🐛',
-  rock: '🪨', ghost: '👻', dragon: '🐉', dark: '🌑',
-  steel: '⚙️', fairy: '🧚',
+  normal: '⬜',
+  fire: '🔥',
+  water: '💧',
+  grass: '🌿',
+  electric: '⚡',
+  ice: '❄️',
+  fighting: '🥊',
+  poison: '☠️',
+  ground: '🌍',
+  flying: '🪽',
+  psychic: '🔮',
+  bug: '🐛',
+  rock: '🪨',
+  ghost: '👻',
+  dragon: '🐉',
+  dark: '🌑',
+  steel: '⚙️',
+  fairy: '🧚',
 };
 
-const G = '\x1b[32m', Y = '\x1b[33m', C = '\x1b[36m', DIM = '\x1b[2m', RESET = '\x1b[0m';
+const G = '\x1b[32m',
+  Y = '\x1b[33m',
+  C = '\x1b[36m',
+  DIM = '\x1b[2m',
+  RESET = '\x1b[0m';
 
 let input = '';
-process.stdin.on('data', chunk => input += chunk);
-process.stdin.on('end', () => { main().catch(() => {}); });
+process.stdin.on('data', (chunk) => (input += chunk));
+process.stdin.on('end', () => {
+  main().catch(() => {});
+});
 
 async function main() {
   const state = loadTrainer();
@@ -28,17 +56,21 @@ async function main() {
 
   // Derive XP from session token counts
   let session = {};
-  try { session = JSON.parse(input); } catch {}
-  const totalTokens = (session.context_window?.total_input_tokens || 0)
-    + (session.context_window?.total_output_tokens || 0);
+  try {
+    session = JSON.parse(input);
+  } catch {}
+  const totalTokens =
+    (session.context_window?.total_input_tokens || 0) +
+    (session.context_window?.total_output_tokens || 0);
 
   // New session detection: token counts reset to 0 each session
+  let dirty = false;
   if (totalTokens < (state.prev_tokens || 0)) {
     state.prev_tokens = 0;
+    dirty = true;
   }
 
   const newXp = tokensToXp(totalTokens, state.prev_tokens || 0);
-  let dirty = false;
 
   if (newXp > 0) {
     state.xp = (state.xp || 0) + newXp;
@@ -57,8 +89,17 @@ async function main() {
         state.species = evolved.species;
         state.species_id = evolved.speciesId;
         state.just_evolved = true;
-        const meta = await resolveSpeciesMeta(evolved.speciesId, state.chain_id, evolved.species);
-        Object.assign(state, { types: meta.types, genus: meta.genus, target_level: meta.targetLevel, is_final: meta.isFinal });
+        const meta = await resolveSpeciesMeta(
+          evolved.speciesId,
+          state.chain_id,
+          evolved.species,
+        );
+        Object.assign(state, {
+          types: meta.types,
+          genus: meta.genus,
+          target_level: meta.targetLevel,
+          is_final: meta.isFinal,
+        });
         dirty = true;
 
         // Queue announcement for Stop hook to deliver
@@ -71,12 +112,25 @@ async function main() {
       } else if (shouldRelease(state, stages)) {
         recordPokemon(state);
         const encounter = await newEncounter();
-        const meta = await resolveSpeciesMeta(encounter.speciesId, encounter.chainId, encounter.species);
+        const meta = await resolveSpeciesMeta(
+          encounter.speciesId,
+          encounter.chainId,
+          encounter.species,
+        );
         Object.assign(state, {
-          chain_id: encounter.chainId, species: encounter.species, species_id: encounter.speciesId,
-          started_species: encounter.species, started_species_id: encounter.speciesId,
-          xp: 0, level: 1, prev_tokens: totalTokens, just_evolved: false,
-          types: meta.types, genus: meta.genus, target_level: meta.targetLevel, is_final: meta.isFinal,
+          chain_id: encounter.chainId,
+          species: encounter.species,
+          species_id: encounter.speciesId,
+          started_species: encounter.species,
+          started_species_id: encounter.speciesId,
+          xp: 0,
+          level: 1,
+          prev_tokens: totalTokens,
+          just_evolved: false,
+          types: meta.types,
+          genus: meta.genus,
+          target_level: meta.targetLevel,
+          is_final: meta.isFinal,
         });
         dirty = true;
         try {
