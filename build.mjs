@@ -10,12 +10,10 @@ await esbuild.build({
   target: 'node18',
   outdir: 'dist',
   outExtension: { '.js': '.mjs' },
-  banner: { js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);" },
-  entryPoints: [
-    'scripts/statusline.mjs',
-    'scripts/session-start.mjs',
-    'scripts/announce.mjs',
-  ],
+  banner: {
+    js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
+  },
+  entryPoints: ['scripts/statusline.mjs', 'scripts/session-start.mjs'],
 });
 
 console.log('Build complete → dist/');

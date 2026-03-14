@@ -5,12 +5,11 @@ import {
   checkEvolution,
   shouldRelease,
   getStages,
-  findCurrentStageIndex,
   newEncounter,
   resolveSpeciesMeta,
 } from '../lib/evolution.mjs';
 import { renderSprite } from '../lib/sprite.mjs';
-import { recordPokemon, loadPokedex } from '../lib/pokedex.mjs';
+import { recordPokemon } from '../lib/pokedex.mjs';
 
 const TYPE_EMOJI = {
   normal: '⬜',
@@ -39,10 +38,12 @@ const G = '\x1b[32m',
   DIM = '\x1b[2m',
   RESET = '\x1b[0m';
 
+const RELEASE_LEVEL = 60;
+
 let input = '';
 process.stdin.on('data', (chunk) => (input += chunk));
 process.stdin.on('end', () => {
-  main().catch(() => {});
+  main().catch((e) => process.stderr.write(`statusmon: ${e.message}\n`));
 });
 
 async function main() {
@@ -79,8 +80,11 @@ async function main() {
     dirty = true;
   }
 
-  // Check evolution and release
-  if (dirty) {
+  // Only check evolution/release when level crosses a threshold
+  const releaseLevel = state.is_final
+    ? RELEASE_LEVEL
+    : state.target_level || 30;
+  if (dirty && state.level >= (state.target_level || 30)) {
     try {
       const stages = await getStages(state.chain_id);
       const evolved = checkEvolution(state, stages);
@@ -100,9 +104,7 @@ async function main() {
           target_level: meta.targetLevel,
           is_final: meta.isFinal,
         });
-        dirty = true;
 
-        // Print announcement directly — statusline output is what the user sees
         try {
           const sprite = await renderSprite(evolved.speciesId);
           console.log(
@@ -129,14 +131,14 @@ async function main() {
           started_species_id: encounter.speciesId,
           xp: 0,
           level: 1,
-          prev_tokens: 0,
+          prev_tokens: totalTokens,
           just_evolved: false,
           types: meta.types,
           genus: meta.genus,
           target_level: meta.targetLevel,
           is_final: meta.isFinal,
+          dex_count: (state.dex_count || 0) + 1,
         });
-        dirty = true;
         try {
           const sprite = await renderSprite(encounter.speciesId);
           console.log(
@@ -148,7 +150,9 @@ async function main() {
           );
         }
       }
-    } catch {}
+    } catch (e) {
+      process.stderr.write(`statusmon evolution check: ${e.message}\n`);
+    }
   }
 
   if (dirty) saveTrainer(state);
@@ -165,17 +169,14 @@ async function main() {
   const typeStr = (state.types || ['normal']).map(capitalize).join('/');
   const genus = state.genus || 'Pokémon';
   const indicator = state.just_evolved ? ' ✨' : state.is_final ? ' ★' : '';
-  const targetLevel = state.target_level || 30;
 
-  const releaseLevel = state.is_final ? 60 : targetLevel;
   const pct = Math.min(1, state.level / releaseLevel);
   const barW = 12;
   const filled = Math.round(pct * barW);
   const barColor = pct > 0.5 ? G : pct > 0.25 ? Y : C;
   const barStr = `  ${barColor}${'█'.repeat(filled)}${'░'.repeat(barW - filled)}${RESET} → Lv.${releaseLevel}`;
 
-  const dexCount = loadPokedex().length;
-  const dexStr = dexCount > 0 ? ` · #${dexCount}` : '';
+  const dexStr = state.dex_count > 0 ? ` · #${state.dex_count}` : '';
 
   console.log(` ${emoji} ${name}${indicator} Lv.${state.level}${barStr}`);
   console.log(`    ${DIM}${typeStr} · ${genus}${dexStr}${RESET}`);
