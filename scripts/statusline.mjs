@@ -190,18 +190,37 @@ async function render(state, level) {
   } catch {}
 
   if (spriteRows.length > 0) {
-    // Info lines positioned vertically centered next to sprite
-    const mid = Math.floor(spriteRows.length / 2) - 2;
-    const infoLines = {
-      [mid]: `  ${emoji} ${name}${indicator} Lv.${level}`,
-      [mid + 1]: `  ${barStr}`,
-      [mid + 2]: `  ${DIM}${typeStr} · ${genus}${dexStr}${RESET}`,
-    };
+    const totalXp =
+      (state.banked_xp || 0) + tokensToXp(state.last_session_tokens || 0);
+    const gen = state.generation || 1;
+    const sessions = state.sessions || 0;
+
+    // Build info panel lines
+    const info = [
+      '',
+      `  ${emoji} ${name}${indicator}`,
+      '',
+      `  ${DIM}Lv.${RESET}${level}`,
+      `  ${barStr}`,
+      '',
+      `  ${DIM}${typeStr}${RESET}`,
+      `  ${DIM}${genus}${RESET}`,
+      '',
+      `  ${DIM}XP ${totalXp} · Gen ${gen}${dexStr}${RESET}`,
+    ];
+
+    // Center info vertically against sprite
+    const offset = Math.max(
+      0,
+      Math.floor((spriteRows.length - info.length) / 2),
+    );
     for (let i = 0; i < spriteRows.length; i++) {
-      console.log(` ${spriteRows[i]}${infoLines[i] || ''}`);
+      const infoIdx = i - offset;
+      const infoLine =
+        infoIdx >= 0 && infoIdx < info.length ? info[infoIdx] : '';
+      console.log(` ${spriteRows[i]}${infoLine}`);
     }
   } else {
-    // Fallback: no sprite, just text
     console.log(` ${emoji} ${name}${indicator} Lv.${level}  ${barStr}`);
     console.log(`    ${DIM}${typeStr} · ${genus}${dexStr}${RESET}`);
   }
@@ -212,36 +231,58 @@ async function miniSprite(pokemonId) {
   const { fetchSprite } = await import('../lib/cache.mjs');
   const buf = await fetchSprite(pokemonId);
   const src = PNG.sync.read(buf);
-  const w = 32,
-    h = 32;
+  const w = 48,
+    h = 48;
+
+  // Bilinear interpolation for smoother downscaling
+  function sample(fx, fy) {
+    const x0 = Math.floor(fx),
+      y0 = Math.floor(fy);
+    const x1 = Math.min(x0 + 1, src.width - 1),
+      y1 = Math.min(y0 + 1, src.height - 1);
+    const dx = fx - x0,
+      dy = fy - y0;
+    const mix = (a, b, t) => Math.round(a + (b - a) * t);
+    const px = (px, py) => {
+      const i = (py * src.width + px) * 4;
+      return [src.data[i], src.data[i + 1], src.data[i + 2], src.data[i + 3]];
+    };
+    const [r00, g00, b00, a00] = px(x0, y0);
+    const [r10, g10, b10, a10] = px(x1, y0);
+    const [r01, g01, b01, a01] = px(x0, y1);
+    const [r11, g11, b11, a11] = px(x1, y1);
+    return {
+      r: mix(mix(r00, r10, dx), mix(r01, r11, dx), dy),
+      g: mix(mix(g00, g10, dx), mix(g01, g11, dx), dy),
+      b: mix(mix(b00, b10, dx), mix(b01, b11, dx), dy),
+      a: mix(mix(a00, a10, dx), mix(a01, a11, dx), dy),
+    };
+  }
+
   const sx = src.width / w,
     sy = src.height / h;
   const rows = [];
   for (let y = 0; y < h; y += 2) {
     let line = '';
     for (let x = 0; x < w; x++) {
-      const ti = (Math.floor(y * sy) * src.width + Math.floor(x * sx)) * 4;
-      const bi =
-        (Math.floor((y + 1) * sy) * src.width + Math.floor(x * sx)) * 4;
-      const ta = src.data[ti + 3],
-        ba = src.data[bi + 3];
-      if (ta < 64 && ba < 64) {
+      const top = sample(x * sx, y * sy);
+      const bot = sample(x * sx, (y + 1) * sy);
+      if (top.a < 64 && bot.a < 64) {
         line += ' ';
         continue;
       }
-      if (ta < 64) {
-        line += `\x1b[38;2;${src.data[bi]};${src.data[bi + 1]};${src.data[bi + 2]}m▄\x1b[0m`;
+      if (top.a < 64) {
+        line += `\x1b[38;2;${bot.r};${bot.g};${bot.b}m▄\x1b[0m`;
         continue;
       }
-      if (ba < 64) {
-        line += `\x1b[38;2;${src.data[ti]};${src.data[ti + 1]};${src.data[ti + 2]}m▀\x1b[0m`;
+      if (bot.a < 64) {
+        line += `\x1b[38;2;${top.r};${top.g};${top.b}m▀\x1b[0m`;
         continue;
       }
-      line += `\x1b[38;2;${src.data[ti]};${src.data[ti + 1]};${src.data[ti + 2]};48;2;${src.data[bi]};${src.data[bi + 1]};${src.data[bi + 2]}m▀\x1b[0m`;
+      line += `\x1b[38;2;${top.r};${top.g};${top.b};48;2;${bot.r};${bot.g};${bot.b}m▀\x1b[0m`;
     }
     rows.push(line);
   }
-  // Trim empty rows from top and bottom
   while (rows.length > 0 && rows[0].trim() === '') rows.shift();
   while (rows.length > 0 && rows[rows.length - 1].trim() === '') rows.pop();
   return rows;
