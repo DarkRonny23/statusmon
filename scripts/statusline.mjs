@@ -101,14 +101,12 @@ async function main() {
   const indicator = state.just_evolved ? ' ✨' : state.is_final ? ' ★' : '';
   const targetLevel = state.target_level || 30;
 
-  let barStr = '';
-  if (!state.is_final) {
-    const pct = Math.min(1, state.level / targetLevel);
-    const barW = 12;
-    const filled = Math.round(pct * barW);
-    const barColor = pct > 0.5 ? G : pct > 0.25 ? Y : C;
-    barStr = `  ${barColor}${'█'.repeat(filled)}${'░'.repeat(barW - filled)}${RESET} → Lv.${targetLevel}`;
-  }
+  const releaseLevel = state.is_final ? 60 : targetLevel;
+  const pct = Math.min(1, state.level / releaseLevel);
+  const barW = 12;
+  const filled = Math.round(pct * barW);
+  const barColor = pct > 0.5 ? G : pct > 0.25 ? Y : C;
+  const barStr = `  ${barColor}${'█'.repeat(filled)}${'░'.repeat(barW - filled)}${RESET} → Lv.${releaseLevel}`;
 
   const dexCount = loadPokedex().length;
   const dexStr = dexCount > 0 ? ` · #${dexCount}` : '';
