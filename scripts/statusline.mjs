@@ -36,11 +36,50 @@ const TYPE_EMOJI = {
   fairy: '🧚',
 };
 
-const G = '\x1b[32m',
-  Y = '\x1b[33m',
-  C = '\x1b[36m',
-  DIM = '\x1b[2m',
+const DIM = '\x1b[2m',
+  BOLD = '\x1b[1m',
   RESET = '\x1b[0m';
+
+// Pokemon game-accurate type colors (RGB)
+const TYPE_COLORS = {
+  normal: [168, 168, 120],
+  fire: [240, 128, 48],
+  water: [104, 144, 240],
+  grass: [120, 200, 80],
+  electric: [248, 208, 48],
+  ice: [152, 216, 216],
+  fighting: [192, 48, 40],
+  poison: [160, 64, 160],
+  ground: [224, 192, 104],
+  flying: [168, 144, 240],
+  psychic: [248, 88, 136],
+  bug: [168, 184, 32],
+  rock: [184, 160, 56],
+  ghost: [112, 88, 152],
+  dragon: [112, 56, 248],
+  dark: [112, 88, 72],
+  steel: [184, 184, 208],
+  fairy: [238, 153, 172],
+};
+
+function rgb(r, g, b) {
+  return `\x1b[38;2;${r};${g};${b}m`;
+}
+function rgbBg(r, g, b) {
+  return `\x1b[48;2;${r};${g};${b}m`;
+}
+function typeColor(types) {
+  const c = TYPE_COLORS[types?.[0]] || TYPE_COLORS.normal;
+  return rgb(c[0], c[1], c[2]);
+}
+function typeColorDim(types) {
+  const c = TYPE_COLORS[types?.[0]] || TYPE_COLORS.normal;
+  return rgb(
+    Math.floor(c[0] * 0.5),
+    Math.floor(c[1] * 0.5),
+    Math.floor(c[2] * 0.5),
+  );
+}
 
 let input = '';
 process.stdin.on('data', (chunk) => (input += chunk));
@@ -171,59 +210,85 @@ async function main() {
 async function render(state, level) {
   const name = capitalize(state.species);
   const emoji = TYPE_EMOJI[state.types?.[0]] || '❓';
-  const typeStr = (state.types || ['normal']).map(capitalize).join('/');
+  const types = state.types || ['normal'];
+  const typeStr = types.map(capitalize).join(' / ');
   const genus = state.genus || 'Pokémon';
   const indicator = state.just_evolved ? ' ✨' : state.is_final ? ' ★' : '';
   const releaseLevel = state.release_level || 60;
+  const tc = typeColor(types);
+  const tcd = typeColorDim(types);
+  const totalXp =
+    (state.banked_xp || 0) + tokensToXp(state.last_session_tokens || 0);
+  const gen = state.generation || 1;
+  const dexCount = state.dex_count || 0;
 
+  // XP bar with type color
   const pct = Math.min(1, level / releaseLevel);
-  const barW = 12;
+  const barW = 18;
   const filled = Math.round(pct * barW);
-  const barColor = pct > 0.5 ? G : pct > 0.25 ? Y : C;
-  const barStr = `${barColor}${'█'.repeat(filled)}${'░'.repeat(barW - filled)}${RESET} → Lv.${releaseLevel}`;
-  const dexStr = state.dex_count > 0 ? ` · #${state.dex_count}` : '';
+  const barFill = `${tc}${'━'.repeat(filled)}${RESET}`;
+  const barEmpty = `${tcd}${'╌'.repeat(barW - filled)}${RESET}`;
 
-  // Render sprite alongside info
+  // Spaced name for that Pokemon game feel
+  const spacedName = name.toUpperCase().split('').join(' ');
+
+  // Card width (visible chars)
+  const cardW = 28;
+  const h = '─';
+  const border = tc;
+
+  // Build the card
+  const card = [
+    `${border}╭${'─'.repeat(cardW)}╮${RESET}`,
+    `${border}│${RESET}${' '.repeat(cardW)}${border}│${RESET}`,
+    `${border}│${RESET}  ${emoji} ${tc}${BOLD}${spacedName}${RESET}${indicator}${pad(cardW - visLen(spacedName) - visLen(indicator) - 4)}${border}│${RESET}`,
+    `${border}│${RESET}  ${DIM}${genus}${RESET}${pad(cardW - visLen(genus) - 2)}${border}│${RESET}`,
+    `${border}│${RESET}${' '.repeat(cardW)}${border}│${RESET}`,
+    `${border}├${'─'.repeat(cardW)}┤${RESET}`,
+    `${border}│${RESET}${' '.repeat(cardW)}${border}│${RESET}`,
+    `${border}│${RESET}  ${DIM}LV${RESET} ${BOLD}${level}${RESET}${pad(cardW - String(level).length - 5)}${border}│${RESET}`,
+    `${border}│${RESET}  ${barFill}${barEmpty}  ${border}│${RESET}`,
+    `${border}│${RESET}  ${DIM}→ Lv.${releaseLevel}${RESET}${pad(cardW - String(releaseLevel).length - 7)}${border}│${RESET}`,
+    `${border}│${RESET}${' '.repeat(cardW)}${border}│${RESET}`,
+    `${border}├${'─'.repeat(cardW)}┤${RESET}`,
+    `${border}│${RESET}${' '.repeat(cardW)}${border}│${RESET}`,
+    `${border}│${RESET}  ${tc}▸${RESET} ${typeStr}${pad(cardW - visLen(typeStr) - 4)}${border}│${RESET}`,
+    `${border}│${RESET}  ${DIM}XP ${totalXp}${RESET}${pad(cardW - String(totalXp).length - 5)}${border}│${RESET}`,
+    `${border}│${RESET}  ${DIM}Gen ${gen}${dexCount > 0 ? ` · Pokédex #${dexCount}` : ''}${RESET}${pad(cardW - visLen(`Gen ${gen}${dexCount > 0 ? ` · Pokédex #${dexCount}` : ''}`) - 2)}${border}│${RESET}`,
+    `${border}│${RESET}${' '.repeat(cardW)}${border}│${RESET}`,
+    `${border}╰${'─'.repeat(cardW)}╯${RESET}`,
+  ];
+
+  // Render sprite alongside card
   let spriteRows = [];
   try {
     spriteRows = await miniSprite(state.species_id);
   } catch {}
 
   if (spriteRows.length > 0) {
-    const totalXp =
-      (state.banked_xp || 0) + tokensToXp(state.last_session_tokens || 0);
-    const gen = state.generation || 1;
-    const sessions = state.sessions || 0;
-
-    // Build info panel lines
-    const info = [
-      '',
-      `  ${emoji} ${name}${indicator}`,
-      '',
-      `  ${DIM}Lv.${RESET}${level}`,
-      `  ${barStr}`,
-      '',
-      `  ${DIM}${typeStr}${RESET}`,
-      `  ${DIM}${genus}${RESET}`,
-      '',
-      `  ${DIM}XP ${totalXp} · Gen ${gen}${dexStr}${RESET}`,
-    ];
-
-    // Center info vertically against sprite
     const offset = Math.max(
       0,
-      Math.floor((spriteRows.length - info.length) / 2),
+      Math.floor((spriteRows.length - card.length) / 2),
     );
-    for (let i = 0; i < spriteRows.length; i++) {
-      const infoIdx = i - offset;
-      const infoLine =
-        infoIdx >= 0 && infoIdx < info.length ? info[infoIdx] : '';
-      console.log(` ${spriteRows[i]}${infoLine}`);
+    const totalRows = Math.max(spriteRows.length, card.length + offset);
+    for (let i = 0; i < totalRows; i++) {
+      const sprite = i < spriteRows.length ? spriteRows[i] : ' '.repeat(48);
+      const cardIdx = i - offset;
+      const cardLine =
+        cardIdx >= 0 && cardIdx < card.length ? '  ' + card[cardIdx] : '';
+      console.log(` ${sprite}${cardLine}`);
     }
   } else {
-    console.log(` ${emoji} ${name}${indicator} Lv.${level}  ${barStr}`);
-    console.log(`    ${DIM}${typeStr} · ${genus}${dexStr}${RESET}`);
+    card.forEach((line) => console.log(` ${line}`));
   }
+}
+
+function visLen(s) {
+  return s.replace(/\x1b\[[0-9;]*m/g, '').length;
+}
+
+function pad(n) {
+  return n > 0 ? ' '.repeat(n) : '';
 }
 
 async function miniSprite(pokemonId) {
