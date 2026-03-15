@@ -294,7 +294,7 @@ async function miniSprite(pokemonId, size = 48) {
       const top = sample(x * sx, y * sy);
       const bot = sample(x * sx, (y + 1) * sy);
       if (top.a < 64 && bot.a < 64) {
-        line += ' ';
+        line += '\x1b[0m ';
         continue;
       }
       if (top.a < 64) {
