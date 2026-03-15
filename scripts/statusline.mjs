@@ -230,7 +230,7 @@ async function render(state, level) {
   const barFill = `${tc}${'━'.repeat(filled)}${RESET}`;
   const barEmpty = `${tcd}${'─'.repeat(barW - filled)}${RESET}`;
 
-  // Open layout — no boxes, just clean spacing and type-colored accents
+  // Text left, sprite right — text is always flush left, sprite floats
   const info = [
     ``,
     `${tc}${BOLD}${name.toUpperCase()}${RESET}${indicator}`,
@@ -240,19 +240,17 @@ async function render(state, level) {
     `${barFill}${barEmpty}`,
     ``,
     `${emoji} ${tc}${typeStr}${RESET}`,
-    `${DIM}${state.started_at || ''}${RESET}`,
     ``,
     `${tcd}XP ${RESET}${DIM}${totalXp}${RESET}  ${tcd}GEN ${RESET}${DIM}${gen}${RESET}${dexCount > 0 ? `  ${tcd}DEX ${RESET}${DIM}#${dexCount}${RESET}` : ''}`,
   ];
 
-  // Render sprite alongside info
   let spriteRows = [];
   try {
     spriteRows = await miniSprite(state.species_id);
   } catch {}
 
   if (spriteRows.length > 0) {
-    // Build combined rows, then trim trailing blank lines
+    const infoW = 30; // fixed column width for text side
     const offset = Math.max(
       0,
       Math.floor((spriteRows.length - info.length) / 2),
@@ -260,13 +258,15 @@ async function render(state, level) {
     const totalRows = Math.max(spriteRows.length, info.length + offset);
     const lines = [];
     for (let i = 0; i < totalRows; i++) {
-      const sprite = i < spriteRows.length ? spriteRows[i] : ' '.repeat(48);
       const infoIdx = i - offset;
       const infoLine =
-        infoIdx >= 0 && infoIdx < info.length ? '   ' + info[infoIdx] : '';
-      lines.push(` ${sprite}${infoLine}`);
+        infoIdx >= 0 && infoIdx < info.length ? info[infoIdx] : '';
+      // Pad info to fixed width, then append sprite
+      const infoPadded =
+        infoLine + ' '.repeat(Math.max(0, infoW - visLen(infoLine)));
+      const sprite = i < spriteRows.length ? spriteRows[i] : '';
+      lines.push(` ${infoPadded}${sprite}`);
     }
-    // Trim trailing empty lines
     while (
       lines.length > 0 &&
       lines[lines.length - 1].replace(/\x1b\[[0-9;]*m/g, '').trim() === ''
@@ -276,6 +276,10 @@ async function render(state, level) {
   } else {
     info.forEach((line) => console.log(` ${line}`));
   }
+}
+
+function visLen(s) {
+  return s.replace(/\x1b\[[0-9;]*m/g, '').length;
 }
 
 async function miniSprite(pokemonId) {
