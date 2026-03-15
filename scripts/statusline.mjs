@@ -335,9 +335,7 @@ async function miniSprite(pokemonId) {
     }
     rows.push(line);
   }
-  // Trim empty rows — sprite height varies per Pokemon, that's fine
-  while (rows.length > 0 && rows[0].trim() === '') rows.shift();
-  while (rows.length > 0 && rows[rows.length - 1].trim() === '') rows.pop();
+  // No trimming — fixed 24-row canvas ensures consistent alignment
   return rows;
 }
 
