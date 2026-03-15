@@ -1,6 +1,6 @@
 {
   "name": "@josheche/statusmon",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "description": "Train a Pokemon companion across your Claude Code sessions",
   "license": "MIT",

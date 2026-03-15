@@ -11,7 +11,7 @@
       "name": "statusmon",
       "source": "./plugin",
       "description": "A Pokemon companion that evolves as you code",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "license": "MIT"
     }
   ]
