@@ -230,7 +230,6 @@ async function render(state, level) {
   const barFill = `${tc}${'━'.repeat(filled)}${RESET}`;
   const barEmpty = `${tcd}${'─'.repeat(barW - filled)}${RESET}`;
 
-  // Compact info — no empty spacer lines
   const info = [
     `${tc}${BOLD}${name.toUpperCase()}${RESET}${indicator}`,
     `${DIM}#${dexNum} · ${genus}${RESET}`,
@@ -240,38 +239,23 @@ async function render(state, level) {
     `${tcd}XP ${RESET}${DIM}${totalXp}${RESET}  ${tcd}GEN ${RESET}${DIM}${gen}${RESET}${dexCount > 0 ? `  ${tcd}DEX ${RESET}${DIM}#${dexCount}${RESET}` : ''}`,
   ];
 
-  // Text left, sprite right
+  // Sprite left, info right — sprite rows always have ANSI content
+  // so Claude Code's statusline renderer won't strip them
   let spriteRows = [];
   try {
     spriteRows = await miniSprite(state.species_id);
   } catch {}
 
   if (spriteRows.length > 0) {
-    const infoW = 30;
-    // Pad info to match sprite height so nothing gets clipped
     const offset = Math.max(
       0,
       Math.floor((spriteRows.length - info.length) / 2),
     );
-    const paddedInfo = [];
-    for (
-      let i = 0;
-      i < Math.max(spriteRows.length, info.length + offset);
-      i++
-    ) {
+    for (let i = 0; i < spriteRows.length; i++) {
       const infoIdx = i - offset;
-      paddedInfo.push(
-        infoIdx >= 0 && infoIdx < info.length ? info[infoIdx] : '',
-      );
-    }
-    for (let i = 0; i < paddedInfo.length; i++) {
-      const rawInfo = paddedInfo[i];
-      const stripped = rawInfo.replace(/\x1b\[[0-9;]*m/g, '');
-      const emojiCount = (stripped.match(/[\u{1F300}-\u{1FFFF}]/gu) || [])
-        .length;
-      const padLen = Math.max(0, infoW - stripped.length - emojiCount);
-      const sprite = i < spriteRows.length ? spriteRows[i] : ' '.repeat(48);
-      console.log(` ${rawInfo}${' '.repeat(padLen)}${sprite}`);
+      const infoLine =
+        infoIdx >= 0 && infoIdx < info.length ? '  ' + info[infoIdx] : '';
+      console.log(` ${spriteRows[i]}${infoLine}`);
     }
   } else {
     info.forEach((line) => console.log(` ${line}`));
