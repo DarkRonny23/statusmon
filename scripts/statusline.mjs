@@ -220,12 +220,16 @@ async function render(state, level, totalTokens) {
   const dexCount = state.dex_count || 0;
   const dexNum = state.species_id || '?';
 
-  // Smooth XP bar — use raw tokens for continuous progress, not quantized level
-  // Tokens needed for release level: (releaseLevel - 1) * 3 * TOKENS_PER_XP
+  // XP bar shows progress toward NEXT level, not release level
+  // Fills up, resets on level-up, fills again — every level feels like progress
   const banked = state.banked_xp || 0;
-  const totalXpRaw = banked + totalTokens / TOKENS_PER_XP; // fractional, not floored
-  const releaseLevelXp = (releaseLevel - 1) * 3; // XP needed for release
-  const pct = Math.min(1, totalXpRaw / releaseLevelXp);
+  const totalXpRaw = banked + totalTokens / TOKENS_PER_XP;
+  const currentLevelXp = (level - 1) * 3; // XP at start of current level
+  const nextLevelXp = level * 3; // XP needed for next level
+  const pct = Math.min(
+    1,
+    (totalXpRaw - currentLevelXp) / (nextLevelXp - currentLevelXp),
+  );
   const barW = 30;
   const filled = Math.round(pct * barW);
   const barFill = `${tc}${'━'.repeat(filled)}${RESET}`;
@@ -236,7 +240,7 @@ async function render(state, level, totalTokens) {
     ` ${emoji} ${tc}${BOLD}${name.toUpperCase()}${RESET}${indicator} ${DIM}#${dexNum} · ${genus} · Gen ${gen}${RESET}`,
   );
   console.log(
-    ` ${DIM}LV${RESET} ${BOLD}${level}${RESET} ${DIM}-> ${releaseLevel}${RESET}`,
+    ` ${DIM}LV${RESET} ${BOLD}${level}${RESET} ${DIM}-> ${level + 1}${RESET}`,
   );
   console.log(` ${barFill}${barEmpty}`);
 
