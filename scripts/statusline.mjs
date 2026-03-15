@@ -230,7 +230,7 @@ async function render(state, level, totalTokens) {
     1,
     (totalXpRaw - currentLevelXp) / (nextLevelXp - currentLevelXp),
   );
-  const barW = 30;
+  const barW = 50;
   const filled = Math.round(pct * barW);
   const barFill = `${tc}${'━'.repeat(filled)}${RESET}`;
   const barEmpty = `${tcd}${'─'.repeat(barW - filled)}${RESET}`;
