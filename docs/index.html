@@ -5,9 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Statusmon — Train Pokemon in Claude Code</title>
 <meta name="description" content="A Pokemon companion that lives in your Claude Code statusline. Train, evolve, catch 'em all.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+@font-face {
+  font-family: 'GameFreak';
+  src: url('assets/gffont.woff2') format('woff2');
+  font-weight: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PkmnRBYGSC';
+  src: url('assets/pkmn-rbygsc.woff2') format('woff2');
+  font-weight: normal;
+  font-display: swap;
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
 :root {
@@ -32,8 +42,8 @@
   --dark: #0f380f;
   --poison: #0f380f;
   --ice: #0f380f;
-  --font-display: 'Silkscreen', cursive;
-  --font-mono: 'Silkscreen', cursive;
+  --font-display: 'GameFreak', 'Silkscreen', cursive;
+  --font-mono: 'PkmnRBYGSC', 'Silkscreen', monospace;
 }
 
 html { scroll-behavior: smooth; }
