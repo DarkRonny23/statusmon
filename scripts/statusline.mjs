@@ -235,12 +235,9 @@ async function render(state, level, totalTokens) {
   const barFill = `${tc}${'━'.repeat(filled)}${RESET}`;
   const barEmpty = `${tcd}${'─'.repeat(barW - filled)}${RESET}`;
 
-  // All info compressed to 3 lines above sprite
+  // 2 lines above sprite
   console.log(
-    ` ${emoji} ${tc}${BOLD}${name.toUpperCase()}${RESET}${indicator} ${DIM}#${dexNum} · ${genus} · Gen ${gen}${RESET}`,
-  );
-  console.log(
-    ` ${DIM}LV${RESET} ${BOLD}${level}${RESET} ${DIM}-> ${level + 1}${RESET}`,
+    ` ${emoji} ${tc}${BOLD}${name.toUpperCase()}${RESET}${indicator} ${DIM}LV${RESET}${BOLD}${level}${RESET} ${DIM}#${dexNum} · ${genus} · Gen ${gen}${RESET}`,
   );
   console.log(` ${barFill}${barEmpty}`);
 
