@@ -244,42 +244,16 @@ async function render(state, level) {
     `${tcd}XP ${RESET}${DIM}${totalXp}${RESET}  ${tcd}GEN ${RESET}${DIM}${gen}${RESET}${dexCount > 0 ? `  ${tcd}DEX ${RESET}${DIM}#${dexCount}${RESET}` : ''}`,
   ];
 
+  // Print info block, then sprite below
+  info.forEach((line) => console.log(` ${line}`));
+
   let spriteRows = [];
   try {
     spriteRows = await miniSprite(state.species_id);
   } catch {}
-
   if (spriteRows.length > 0) {
-    const infoW = 30; // fixed column width for text side
-    const offset = Math.max(
-      0,
-      Math.floor((spriteRows.length - info.length) / 2),
-    );
-    const totalRows = Math.max(spriteRows.length, info.length + offset);
-    const lines = [];
-    for (let i = 0; i < totalRows; i++) {
-      const infoIdx = i - offset;
-      const infoLine =
-        infoIdx >= 0 && infoIdx < info.length ? info[infoIdx] : '';
-      // Pad info to fixed width, then append sprite
-      const infoPadded =
-        infoLine + ' '.repeat(Math.max(0, infoW - visLen(infoLine)));
-      const sprite = i < spriteRows.length ? spriteRows[i] : '';
-      lines.push(` ${infoPadded}${sprite}`);
-    }
-    while (
-      lines.length > 0 &&
-      lines[lines.length - 1].replace(/\x1b\[[0-9;]*m/g, '').trim() === ''
-    )
-      lines.pop();
-    lines.forEach((l) => console.log(l));
-  } else {
-    info.forEach((line) => console.log(` ${line}`));
+    spriteRows.forEach((line) => console.log(` ${line}`));
   }
-}
-
-function visLen(s) {
-  return s.replace(/\x1b\[[0-9;]*m/g, '').length;
 }
 
 async function miniSprite(pokemonId) {
