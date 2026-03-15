@@ -252,18 +252,27 @@ async function render(state, level) {
   } catch {}
 
   if (spriteRows.length > 0) {
+    // Build combined rows, then trim trailing blank lines
     const offset = Math.max(
       0,
       Math.floor((spriteRows.length - info.length) / 2),
     );
     const totalRows = Math.max(spriteRows.length, info.length + offset);
+    const lines = [];
     for (let i = 0; i < totalRows; i++) {
       const sprite = i < spriteRows.length ? spriteRows[i] : ' '.repeat(48);
       const infoIdx = i - offset;
       const infoLine =
         infoIdx >= 0 && infoIdx < info.length ? '   ' + info[infoIdx] : '';
-      console.log(` ${sprite}${infoLine}`);
+      lines.push(` ${sprite}${infoLine}`);
     }
+    // Trim trailing empty lines
+    while (
+      lines.length > 0 &&
+      lines[lines.length - 1].replace(/\x1b\[[0-9;]*m/g, '').trim() === ''
+    )
+      lines.pop();
+    lines.forEach((l) => console.log(l));
   } else {
     info.forEach((line) => console.log(` ${line}`));
   }
@@ -326,8 +335,7 @@ async function miniSprite(pokemonId) {
     }
     rows.push(line);
   }
-  while (rows.length > 0 && rows[0].trim() === '') rows.shift();
-  while (rows.length > 0 && rows[rows.length - 1].trim() === '') rows.pop();
+  // Fixed 24-row canvas — no trimming. Consistent vertical positioning.
   return rows;
 }
 
