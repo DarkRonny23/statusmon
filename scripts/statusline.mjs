@@ -212,7 +212,7 @@ async function render(state, level, totalTokens) {
   const types = state.types || ['normal'];
   const typeStr = types.map(capitalize).join(' · ');
   const genus = state.genus || 'Pokémon';
-  const dexUrl = `https://www.pokemon.com/us/pokedex/${state.species}`;
+  const dexUrl = `https://pokemondb.net/pokedex/${state.species}`;
   const releaseLevel = state.release_level || 60;
   const tc = typeColor(types);
   const tcd = typeColorDim(types);
